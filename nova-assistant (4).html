@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#06070F">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>NOVA</title>
+<style>
+  :root{
+    --bg:#06070F; --ink:#EAF2FF; --muted:#8C93B8;
+    --cyan:#22E0FF; --violet:#8A5BFF; --magenta:#FF4D9D;
+    --glass:rgba(255,255,255,.06); --glassb:rgba(255,255,255,.12);
+    --ok:#3DF5A0; --warn:#FFC24B; --err:#FF6B7D;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;}
+  body{
+    margin:0; background:var(--bg); color:var(--ink); overflow:hidden; position:relative;
+    font-family:Roboto,-apple-system,"Segoe UI",system-ui,sans-serif;
+    display:flex; flex-direction:column;
+    padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
+  }
+  /* aurora background */
+  .aura{position:fixed; inset:-20%; z-index:0; filter:blur(70px); opacity:.55; pointer-events:none;}
+  .aura i{position:absolute; width:46vmax; height:46vmax; border-radius:50%; mix-blend-mode:screen; animation:drift 26s ease-in-out infinite;}
+  .aura i:nth-child(1){background:radial-gradient(circle,var(--cyan),transparent 60%); top:-10%; left:-10%;}
+  .aura i:nth-child(2){background:radial-gradient(circle,var(--violet),transparent 60%); bottom:-15%; right:-10%; animation-delay:-8s;}
+  .aura i:nth-child(3){background:radial-gradient(circle,var(--magenta),transparent 60%); top:30%; right:20%; animation-delay:-16s; width:36vmax; height:36vmax;}
+  @keyframes drift{0%,100%{transform:translate(0,0) scale(1);}33%{transform:translate(8%,6%) scale(1.12);}66%{transform:translate(-6%,4%) scale(.95);}}
+  @media (prefers-reduced-motion: reduce){.aura i{animation:none;} .orb{animation:none!important;} }
+
+  .app{position:relative; z-index:1; display:flex; flex-direction:column; height:100%;}
+
+  header{display:flex; align-items:center; justify-content:space-between; padding:14px 16px 10px;}
+  .brand{display:flex; align-items:center; gap:10px;}
+  .brand .dot{width:11px; height:11px; border-radius:50%; background:linear-gradient(135deg,var(--cyan),var(--magenta)); box-shadow:0 0 12px var(--cyan);}
+  .brand b{font-size:19px; letter-spacing:4px; font-weight:800; background:linear-gradient(90deg,var(--cyan),var(--violet),var(--magenta)); -webkit-background-clip:text; background-clip:text; color:transparent;}
+  .brand small{display:block; font-size:9px; letter-spacing:3px; color:var(--muted); margin-top:-2px;}
+  .hbtns{display:flex; gap:8px;}
+  .gbtn{width:42px; height:42px; border-radius:14px; border:1px solid var(--glassb); background:var(--glass); backdrop-filter:blur(12px); color:var(--ink); font-size:17px; display:flex; align-items:center; justify-content:center;}
+  .gbtn:active{background:rgba(255,255,255,.14);}
+  .gbtn .badge{position:absolute; margin:-26px 0 0 22px; min-width:16px; height:16px; padding:0 4px; border-radius:9px; background:var(--magenta); color:#fff; font-size:10px; line-height:16px; text-align:center; font-weight:700;}
+
+  #chat{flex:1; overflow-y:auto; padding:8px 16px 10px; display:flex; flex-direction:column; gap:11px;}
+  .msg{max-width:86%; padding:12px 15px; border-radius:18px; font-size:15.5px; line-height:1.45; white-space:pre-wrap; word-wrap:break-word; backdrop-filter:blur(8px);}
+  .me{align-self:flex-end; background:linear-gradient(135deg,rgba(138,91,255,.32),rgba(34,224,255,.22)); border:1px solid rgba(138,91,255,.4); border-bottom-right-radius:6px;}
+  .bot{align-self:flex-start; background:var(--glass); border:1px solid var(--glassb); border-bottom-left-radius:6px;}
+  .bot.think{color:var(--muted);}
+  .sys{align-self:center; font-size:12.5px; color:var(--muted); text-align:center; background:rgba(255,255,255,.04); border:1px solid var(--glassb); padding:7px 12px; border-radius:12px; max-width:92%;}
+  .sys.err{color:var(--err); border-color:rgba(255,107,125,.4);}
+  .sys.ok{color:var(--ok); border-color:rgba(61,245,160,.35);}
+
+  .hero{margin:auto; text-align:center; padding:0 26px;}
+  .orbhero{width:120px; height:120px; margin:0 auto 18px; border-radius:50%;
+    background:radial-gradient(circle at 35% 30%, #fff6, transparent 40%), conic-gradient(from 0deg,var(--cyan),var(--violet),var(--magenta),var(--cyan));
+    box-shadow:0 0 50px -6px var(--violet), inset 0 0 30px rgba(255,255,255,.25); animation:spin 14s linear infinite, float 5s ease-in-out infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  @keyframes float{0%,100%{margin-top:0;}50%{margin-top:-8px;}}
+  .hero h2{font-size:23px; font-weight:800; margin:0 0 6px; letter-spacing:1px;}
+  .hero p{margin:0; color:var(--muted); font-size:14.5px; line-height:1.5;}
+
+  /* dock */
+  .dock{padding:8px 14px 14px; display:flex; flex-direction:column; gap:11px;}
+  .hint{text-align:center; min-height:17px; font-size:12.5px; color:var(--muted);}
+  .micwrap{display:flex; justify-content:center;}
+  .orb{position:relative; width:72px; height:72px; border-radius:50%; border:none;
+    background:radial-gradient(circle at 35% 30%, #ffffffcc, transparent 42%), conic-gradient(from 0deg,var(--cyan),var(--violet),var(--magenta),var(--cyan));
+    box-shadow:0 0 34px -6px var(--violet); animation:float 5s ease-in-out infinite; display:flex; align-items:center; justify-content:center;}
+  .orb svg{width:28px; height:28px; color:#0a0a14;}
+  .orb:active{transform:scale(.94);}
+  .orb.listening{animation:float 5s ease-in-out infinite, glow 1.2s ease-in-out infinite;}
+  .orb.listening::after{content:""; position:absolute; inset:-8px; border-radius:50%; border:2px solid var(--cyan); animation:ripple 1.2s ease-out infinite;}
+  @keyframes glow{50%{box-shadow:0 0 48px 2px var(--cyan);}}
+  @keyframes ripple{0%{transform:scale(1);opacity:.7;}100%{transform:scale(1.55);opacity:0;}}
+  .inrow{display:flex; gap:9px; align-items:center;}
+  #text{flex:1; min-width:0; background:var(--glass); border:1px solid var(--glassb); backdrop-filter:blur(12px); color:var(--ink); border-radius:16px; padding:13px 16px; font-size:15.5px; outline:none; font-family:inherit;}
+  #text::placeholder{color:var(--muted);}
+  #text:focus{border-color:var(--cyan);}
+  #send{width:48px; height:48px; flex:0 0 48px; border:none; border-radius:16px; background:linear-gradient(135deg,var(--cyan),var(--violet)); color:#06070F; font-size:20px;}
+  #send:active{filter:brightness(.9);}
+
+  /* sheets */
+  .overlay{position:fixed; inset:0; z-index:20; background:rgba(2,3,10,.6); backdrop-filter:blur(3px); display:none;}
+  .overlay.open{display:block;}
+  .sheet{position:absolute; left:0; right:0; bottom:0; background:rgba(16,18,34,.92); backdrop-filter:blur(22px); border-top:1px solid var(--glassb); border-radius:24px 24px 0 0; padding:18px 18px calc(18px + env(safe-area-inset-bottom)); max-height:90%; overflow-y:auto;}
+  .sheet h3{margin:2px 0 16px; font-size:18px; letter-spacing:.5px;}
+  .field{margin-bottom:15px;}
+  .field label{display:block; font-size:12.5px; color:var(--muted); margin-bottom:7px; letter-spacing:.3px;}
+  .field input, .field textarea{width:100%; background:rgba(255,255,255,.05); border:1px solid var(--glassb); color:var(--ink); border-radius:13px; padding:12px 14px; font-size:15px; outline:none; font-family:inherit;}
+  .field textarea{min-height:96px; resize:vertical; line-height:1.45;}
+  .field input:focus, .field textarea:focus{border-color:var(--cyan);}
+  .field .note{font-size:11.5px; color:var(--muted); margin-top:6px; line-height:1.4;}
+  .field .note a{color:var(--cyan);}
+
+  /* model picker */
+  .modelbox{border:1px solid var(--glassb); border-radius:13px; overflow:hidden;}
+  .modelbox .cur{padding:12px 14px; display:flex; justify-content:space-between; gap:10px; align-items:center; font-size:14.5px;}
+  .modelbox .cur span{color:var(--muted); font-size:12px;}
+  .modellist{display:none; border-top:1px solid var(--glassb); max-height:240px; overflow-y:auto;}
+  .modellist.open{display:block;}
+  .modellist .search{padding:8px;}
+  .modellist .search input{width:100%; background:rgba(255,255,255,.05); border:1px solid var(--glassb); color:var(--ink); border-radius:10px; padding:9px 11px; font-size:13.5px; outline:none; font-family:inherit;}
+  .mitem{padding:11px 14px; border-top:1px solid rgba(255,255,255,.05); font-size:13.5px;}
+  .mitem:active{background:rgba(255,255,255,.07);}
+  .mitem b{display:block; font-weight:600;}
+  .mitem small{color:var(--muted); font-size:11px; word-break:break-all;}
+  .mitem.sel{background:rgba(34,224,255,.12);}
+
+  .actions{display:flex; gap:10px; margin-top:4px;}
+  .btn{flex:1; border:none; border-radius:14px; padding:14px; font-size:15px; font-weight:600; font-family:inherit; letter-spacing:.3px;}
+  .btn.primary{background:linear-gradient(135deg,var(--cyan),var(--violet)); color:#06070F;}
+  .btn.ghost{background:rgba(255,255,255,.06); color:var(--ink); border:1px solid var(--glassb);}
+  .btn:active{filter:brightness(.9);}
+  .clearbtn{width:100%; margin-top:12px; background:transparent; border:1px solid rgba(255,107,125,.4); color:var(--err); border-radius:13px; padding:12px; font-size:13.5px; font-family:inherit;}
+
+  /* tasks */
+  .taskadd{display:flex; gap:8px; margin-bottom:14px;}
+  .taskadd input[type=text]{flex:1;}
+  .taskadd input{background:rgba(255,255,255,.05); border:1px solid var(--glassb); color:var(--ink); border-radius:12px; padding:11px 12px; font-size:14px; outline:none; font-family:inherit; min-width:0;}
+  .taskadd button{flex:0 0 46px; border:none; border-radius:12px; background:linear-gradient(135deg,var(--cyan),var(--violet)); color:#06070F; font-size:20px;}
+  .task{display:flex; align-items:flex-start; gap:11px; padding:13px 4px; border-bottom:1px solid rgba(255,255,255,.06);}
+  .task .chk{width:22px; height:22px; flex:0 0 22px; border-radius:7px; border:2px solid var(--glassb); margin-top:1px; display:flex; align-items:center; justify-content:center; color:var(--ok); font-size:14px;}
+  .task.done .chk{background:rgba(61,245,160,.18); border-color:var(--ok);}
+  .task .body{flex:1; min-width:0;}
+  .task .body .t{font-size:15px;}
+  .task.done .body .t{text-decoration:line-through; color:var(--muted);}
+  .task .body .d{font-size:12px; color:var(--cyan); margin-top:3px;}
+  .task .body .d.past{color:var(--warn);}
+  .task .del{color:var(--muted); font-size:18px; padding:0 4px;}
+  .empty-tasks{color:var(--muted); text-align:center; font-size:14px; padding:24px 0;}
+</style>
+</head>
+<body>
+  <div class="aura"><i></i><i></i><i></i></div>
+  <div class="app">
+    <header>
+      <div class="brand">
+        <div class="dot"></div>
+        <div><b>NOVA</b><small>ASSISTANT · 2200</small></div>
+      </div>
+      <div class="hbtns">
+        <button class="gbtn" id="openTasks" aria-label="Задачи">🗓<span class="badge" id="taskBadge" style="display:none">0</span></button>
+        <button class="gbtn" id="openSettings" aria-label="Настройки">⚙</button>
+      </div>
+    </header>
+
+    <div id="chat">
+      <div class="hero" id="hero">
+        <div class="orbhero"></div>
+        <h2>Привет, я NOVA</h2>
+        <p>Говори или пиши. Я отвечу, напомню о делах и поведу твой календарь. Вставь ключ OpenRouter в ⚙, чтобы начать.</p>
+      </div>
+    </div>
+
+    <div class="dock">
+      <div class="hint" id="hint"></div>
+      <div class="micwrap">
+        <button class="orb" id="mic" aria-label="Говорить">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/>
+          </svg>
+        </button>
+      </div>
+      <div class="inrow">
+        <input id="text" placeholder="Напиши сообщение…" autocomplete="off">
+        <button id="send" aria-label="Отправить">➤</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SETTINGS -->
+  <div class="overlay" id="ovSettings">
+    <div class="sheet">
+      <h3>⚙ Настройки</h3>
+      <div class="field">
+        <label>Ключ OpenRouter</label>
+        <input id="key" type="password" placeholder="sk-or-v1-…">
+        <div class="note">openrouter.ai → пополни баланс → Keys. Хранится только на телефоне.</div>
+      </div>
+      <div class="field">
+        <label>Модель <span id="mCount" style="color:var(--muted)"></span></label>
+        <div class="modelbox">
+          <div class="cur" id="modelCur"><div id="modelCurName">anthropic/claude-sonnet-4.6</div><span>выбрать ▾</span></div>
+          <div class="modellist" id="modelList">
+            <div class="search"><input id="modelSearch" placeholder="Поиск модели… (claude, gpt, gemini)"></div>
+            <div id="modelItems"></div>
+          </div>
+        </div>
+        <div class="note" id="modelNote">Список загрузится автоматически с OpenRouter.</div>
+      </div>
+      <div class="field">
+        <label>Голос озвучки</label>
+        <div style="display:flex; gap:8px; align-items:stretch;">
+          <select id="voiceSel" style="flex:1; min-width:0; background:rgba(255,255,255,.05); border:1px solid var(--glassb); color:var(--ink); border-radius:13px; padding:12px 14px; font-size:14px; outline:none; font-family:inherit;"></select>
+          <button id="voiceTest" type="button" class="btn ghost" style="flex:0 0 auto; padding:0 18px; font-size:18px;">▶</button>
+        </div>
+        <div class="note">Список зависит от голосов на телефоне. Добавить ещё: Настройки Android → Язык → Синтез речи (Google TTS).</div>
+      </div>
+      <div class="field">
+        <label>🎙 Студийный голос ElevenLabs (по желанию)</label>
+        <input id="elKey" type="password" placeholder="Ключ ElevenLabs (xi-…)">
+        <div class="note">Живые AI-голоса. Ключ: elevenlabs.io → Profile → API Keys. Без него NOVA говорит системным голосом. Озвучка тратит баланс ElevenLabs.</div>
+        <button id="elLoad" type="button" class="btn ghost" style="width:100%; margin-top:9px; padding:11px;">Загрузить голоса ElevenLabs</button>
+        <div style="display:flex; gap:8px; align-items:stretch; margin-top:9px;">
+          <select id="elSel" style="flex:1; min-width:0; background:rgba(255,255,255,.05); border:1px solid var(--glassb); color:var(--ink); border-radius:13px; padding:12px 14px; font-size:14px; outline:none; font-family:inherit;"><option value="">— системный голос —</option></select>
+          <button id="elTest" type="button" class="btn ghost" style="flex:0 0 auto; padding:0 18px; font-size:18px;">▶</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>Характер помощника</label>
+        <textarea id="prompt"></textarea>
+      </div>
+      <div class="actions">
+        <button class="btn ghost" id="cancelSettings">Отмена</button>
+        <button class="btn primary" id="saveSettings">Сохранить</button>
+      </div>
+      <button class="clearbtn" id="clearChat">Очистить переписку</button>
+    </div>
+  </div>
+
+  <!-- TASKS -->
+  <div class="overlay" id="ovTasks">
+    <div class="sheet">
+      <h3>🗓 Задачи и напоминания</h3>
+      <div class="taskadd">
+        <input type="text" id="ntTitle" placeholder="Что сделать…">
+        <input type="datetime-local" id="ntWhen">
+        <button id="ntAdd" aria-label="Добавить">＋</button>
+      </div>
+      <div id="taskList"></div>
+      <div class="actions" style="margin-top:14px;">
+        <button class="btn ghost" id="closeTasks">Закрыть</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+(function(){
+  "use strict";
+
+  var DEFAULT_PROMPT =
+"Ты — NOVA, личный голосовой помощник из будущего. Дружелюбный, спокойный, говоришь живо и по-человечески.\n"+
+"Отвечай всегда на русском, коротко: 1–3 предложения, как в разговоре. Без длинных списков, если не просят.\n"+
+"Ты ведёшь календарь пользователя. Если человек просит что-то запланировать, напомнить или назначить — кратко подтверди словами, а затем В САМОМ КОНЦЕ ответа добавь служебную строку строго в формате:\n"+
+"<<TASK {\"title\":\"краткое название\",\"datetime\":\"ГГГГ-ММ-ДДTЧЧ:ММ\"}>>\n"+
+"Если дату/время не указали явно — вычисли их от текущего момента (тебе дают текущую дату). Если время не названо, ставь 09:00. Маркер <<TASK ...>> пользователю не виден — не упоминай его и не объясняй.\n"+
+"Если просто болтают или спрашивают — маркер не добавляй. Не выдумывай факты, чего не знаешь — скажи честно.";
+
+  var BUILTIN_VOICES=[
+    {id:"21m00Tcm4TlvDq8ikWAM",name:"Rachel (жен.)"},
+    {id:"EXAVITQu4vr4xnSDxMaL",name:"Bella (жен.)"},
+    {id:"AZnzlk1XvdvUeBnXmlld",name:"Domi (жен.)"},
+    {id:"MF3mGyEYCl7XYWbV9V6O",name:"Elli (жен.)"},
+    {id:"pNInz6obpgDQGcFmaJgB",name:"Adam (муж.)"},
+    {id:"ErXwobaYiN019PkySvjV",name:"Antoni (муж.)"},
+    {id:"TxGEqnHWrfWFTfGW9XjX",name:"Josh (муж.)"},
+    {id:"VR6AewLTigWG4xSOukaG",name:"Arnold (муж.)"},
+    {id:"yoZ06aMxZJJ28mfd3POQ",name:"Sam (муж.)"}
+  ];
+
+  var mem={};
+  function load(k,d){ try{var v=localStorage.getItem(k); return v===null?d:v;}catch(e){return (k in mem)?mem[k]:d;} }
+  function save(k,v){ try{localStorage.setItem(k,v);}catch(e){mem[k]=v;} }
+
+  var S={ key:load("nv_key",""), model:load("nv_model","anthropic/claude-sonnet-4.6"), prompt:load("nv_prompt",DEFAULT_PROMPT), voiceName:load("nv_voice",""), elKey:load("nv_elkey",""), elVoice:load("nv_elvoice",""), elVoiceName:load("nv_elname","") };
+  var history=[]; try{history=JSON.parse(load("nv_hist","[]"))||[];}catch(e){history=[];}
+  var tasks=[]; try{tasks=JSON.parse(load("nv_tasks","[]"))||[];}catch(e){tasks=[];}
+  var models=[];
+  var elVoices=[];
+
+  var $=function(id){return document.getElementById(id);};
+  var chat=$("chat"), hero=$("hero"), hint=$("hint"), micBtn=$("mic"), textInput=$("text");
+
+  // ---------- chat render ----------
+  function bubble(role,text){var d=document.createElement("div"); d.className="msg "+(role==="user"?"me":"bot"); d.textContent=text; return d;}
+  function render(){
+    chat.querySelectorAll(".msg").forEach(function(n){n.remove();});
+    if(history.length===0){hero.style.display="block";}
+    else{hero.style.display="none"; history.forEach(function(m){chat.appendChild(bubble(m.role,m.content));});}
+    chat.scrollTop=chat.scrollHeight;
+  }
+  function persistHist(){save("nv_hist",JSON.stringify(history.slice(-40)));}
+  function sysmsg(t,cls){hero.style.display="none"; var d=document.createElement("div"); d.className="sys "+(cls||""); d.textContent=t; chat.appendChild(d); chat.scrollTop=chat.scrollHeight;}
+
+  // ---------- TTS ----------
+  var curVoice=null;
+  function allVoices(){return window.speechSynthesis?speechSynthesis.getVoices():[];}
+  function pickVoice(){
+    var vs=allVoices(), i; curVoice=null;
+    if(S.voiceName){for(i=0;i<vs.length;i++){if(vs[i].name===S.voiceName){curVoice=vs[i];break;}}}
+    if(!curVoice){for(i=0;i<vs.length;i++){if((vs[i].lang||"").toLowerCase().indexOf("ru")===0){curVoice=vs[i];break;}}}
+    populateVoiceSelect();
+  }
+  if(window.speechSynthesis){pickVoice(); speechSynthesis.onvoiceschanged=pickVoice;}
+  function browserSpeak(t){if(!window.speechSynthesis||!t)return; try{speechSynthesis.cancel(); var u=new SpeechSynthesisUtterance(t); u.lang=(curVoice&&curVoice.lang)?curVoice.lang:"ru-RU"; if(curVoice)u.voice=curVoice; u.rate=1.02; speechSynthesis.speak(u);}catch(e){}}
+  function speak(t){ if(!t)return; if(S.elKey&&S.elVoice){ speakEleven(t); } else { browserSpeak(t); } }
+  function speakEleven(t){
+    var k=(S.elKey||"").replace(/[^\x21-\x7E]/g,"");
+    fetch("https://api.elevenlabs.io/v1/text-to-speech/"+encodeURIComponent(S.elVoice),{
+      method:"POST", headers:{"xi-api-key":k,"Content-Type":"application/json","Accept":"audio/mpeg"},
+      body:JSON.stringify({text:t, model_id:"eleven_multilingual_v2"})
+    }).then(function(r){ if(!r.ok) return r.text().then(function(x){throw new Error(x.slice(0,120));}); return r.blob(); })
+    .then(function(b){ try{ if(window.__na){window.__na.pause();} var a=new Audio(URL.createObjectURL(b)); window.__na=a; a.play(); }catch(e){} })
+    .catch(function(){ browserSpeak(t); });
+  }
+  function populateVoiceSelect(){
+    var sel=document.getElementById("voiceSel"); if(!sel)return;
+    var vs=allVoices().slice().sort(function(a,b){var ar=(a.lang||"").toLowerCase().indexOf("ru")===0?0:1, br=(b.lang||"").toLowerCase().indexOf("ru")===0?0:1; return ar-br||(a.name||"").localeCompare(b.name||"");});
+    sel.innerHTML="";
+    var auto=document.createElement("option"); auto.value=""; auto.textContent="Авто (русский по умолчанию)"; sel.appendChild(auto);
+    vs.forEach(function(v){var o=document.createElement("option"); o.value=v.name; o.textContent=v.name+" · "+v.lang; if(v.name===S.voiceName)o.selected=true; sel.appendChild(o);});
+  }
+
+  // ---------- date helper ----------
+  function nowContext(){
+    var d=new Date();
+    var days=["воскресенье","понедельник","вторник","среда","четверг","пятница","суббота"];
+    var iso=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")+"T"+String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0");
+    return "Текущая дата и время: "+iso+" ("+days[d.getDay()]+").";
+  }
+  function tasksContext(){
+    var up=tasks.filter(function(t){return !t.done;}).slice(0,8);
+    if(!up.length) return "Активных задач нет.";
+    return "Запланированные задачи: "+up.map(function(t){return t.title+" — "+fmt(t.datetime);}).join("; ")+".";
+  }
+
+  // ---------- LLM ----------
+  function ask(userText){
+    if(!S.key){openSettings(); sysmsg("Сначала вставь ключ OpenRouter в настройках ⚙",""); return;}
+    history.push({role:"user",content:userText}); render(); persistHist();
+    var th=bubble("assistant","…думаю"); th.classList.add("think"); th.id="thinking"; hero.style.display="none"; chat.appendChild(th); chat.scrollTop=chat.scrollHeight;
+
+    var sys=S.prompt+"\n\n"+nowContext()+"\n"+tasksContext();
+    var msgs=[{role:"system",content:sys}].concat(history.slice(-12));
+    var ck=(S.key||"").replace(/[^\x21-\x7E]/g,"");
+    fetch("https://openrouter.ai/api/v1/chat/completions",{
+      method:"POST",
+      headers:{"Content-Type":"application/json","Authorization":"Bearer "+ck,"X-Title":"NOVA Assistant"},
+      body:JSON.stringify({model:S.model,messages:msgs,max_tokens:700})
+    }).then(function(r){return r.json().then(function(d){return {ok:r.ok,d:d};});})
+    .then(function(res){
+      var t=$("thinking"); if(t)t.remove();
+      if(!res.ok){var em=(res.d&&res.d.error&&res.d.error.message)?res.d.error.message:JSON.stringify(res.d).slice(0,140); sysmsg("Ошибка: "+em,"err"); return;}
+      var raw=res.d.choices&&res.d.choices[0]&&res.d.choices[0].message&&res.d.choices[0].message.content?res.d.choices[0].message.content.trim():"(пусто)";
+      var clean=handleTasks(raw);
+      history.push({role:"assistant",content:clean}); render(); persistHist(); speak(clean);
+    }).catch(function(err){var t=$("thinking"); if(t)t.remove(); sysmsg("Нет связи с сервером. Проверь интернет/VPN. ("+err.message+")","err");});
+  }
+
+  // parse <<TASK {...}>> markers
+  function handleTasks(text){
+    var re=/<<TASK\s*(\{[\s\S]*?\})\s*>>/g, m, added=0;
+    while((m=re.exec(text))){
+      try{var o=JSON.parse(m[1]); if(o&&o.title&&o.datetime){ addTask(o.title,o.datetime,true); added++; }}catch(e){}
+    }
+    var clean=text.replace(re,"").trim();
+    if(added){ setTimeout(function(){ sysmsg("🗓 Добавлено в задачи ("+added+")","ok"); },150); }
+    return clean||"Готово.";
+  }
+
+  function sendText(){var v=textInput.value.trim(); if(!v)return; textInput.value=""; ask(v);}
+  $("send").addEventListener("click",sendText);
+  textInput.addEventListener("keydown",function(e){if(e.key==="Enter"){e.preventDefault();sendText();}});
+
+  // ---------- STT ----------
+  var SR=window.SpeechRecognition||window.webkitSpeechRecognition, rec=null, listening=false;
+  if(SR){
+    rec=new SR(); rec.lang="ru-RU"; rec.interimResults=true; rec.continuous=false; var fin="";
+    rec.onstart=function(){listening=true; micBtn.classList.add("listening"); hint.textContent="Слушаю…"; fin=""; if(window.speechSynthesis)speechSynthesis.cancel();};
+    rec.onresult=function(e){var it=""; for(var i=e.resultIndex;i<e.results.length;i++){var tr=e.results[i][0].transcript; if(e.results[i].isFinal)fin+=tr; else it+=tr;} hint.textContent=(fin+it)||"Слушаю…";};
+    rec.onerror=function(e){micBtn.classList.remove("listening"); listening=false; if(e.error==="not-allowed"||e.error==="service-not-allowed")hint.textContent="Микрофон доступен только по https-ссылке"; else if(e.error==="no-speech")hint.textContent="Не расслышал, повтори"; else hint.textContent="";};
+    rec.onend=function(){micBtn.classList.remove("listening"); listening=false; var v=fin.trim(); if(v){hint.textContent=""; ask(v);} else hint.textContent="";};
+    micBtn.addEventListener("click",function(){if(listening){try{rec.stop();}catch(e){}return;} try{rec.start();}catch(e){}});
+  } else { micBtn.addEventListener("click",function(){hint.textContent="Голос недоступен в этом браузере — пиши текстом";}); }
+
+  // ---------- TASKS ----------
+  function fmt(iso){
+    try{var d=new Date(iso); var dd=String(d.getDate()).padStart(2,"0"),mm=String(d.getMonth()+1).padStart(2,"0");
+      return dd+"."+mm+" "+String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0");}catch(e){return iso;}
+  }
+  function addTask(title,datetime,fromAI){
+    tasks.push({id:Date.now()+Math.random(),title:title,datetime:datetime,done:false,notified:false});
+    tasks.sort(function(a,b){return new Date(a.datetime)-new Date(b.datetime);});
+    saveTasks(); renderTasks(); updateBadge();
+  }
+  function saveTasks(){save("nv_tasks",JSON.stringify(tasks));}
+  function updateBadge(){
+    var n=tasks.filter(function(t){return !t.done;}).length, b=$("taskBadge");
+    if(n>0){b.style.display="block"; b.textContent=n;} else b.style.display="none";
+  }
+  function renderTasks(){
+    var L=$("taskList"); L.innerHTML="";
+    if(!tasks.length){L.innerHTML='<div class="empty-tasks">Пока пусто. Скажи NOVA «напомни завтра…» или добавь вручную.</div>'; return;}
+    var now=new Date();
+    tasks.forEach(function(t){
+      var row=document.createElement("div"); row.className="task"+(t.done?" done":"");
+      var past=!t.done && new Date(t.datetime)<now;
+      row.innerHTML='<div class="chk">'+(t.done?"✓":"")+'</div><div class="body"><div class="t"></div><div class="d'+(past?" past":"")+'">'+fmt(t.datetime)+(past?" · прошло":"")+'</div></div><div class="del">✕</div>';
+      row.querySelector(".t").textContent=t.title;
+      row.querySelector(".chk").addEventListener("click",function(){t.done=!t.done; saveTasks(); renderTasks(); updateBadge();});
+      row.querySelector(".del").addEventListener("click",function(){tasks=tasks.filter(function(x){return x.id!==t.id;}); saveTasks(); renderTasks(); updateBadge();});
+      L.appendChild(row);
+    });
+  }
+  $("ntAdd").addEventListener("click",function(){
+    var ti=$("ntTitle").value.trim(), wh=$("ntWhen").value;
+    if(!ti){$("ntTitle").focus(); return;}
+    if(!wh){var d=new Date(d=new Date(Date.now()+3600000)); wh=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0")+"T"+String(d.getHours()).padStart(2,"0")+":00";}
+    addTask(ti,wh,false); $("ntTitle").value=""; $("ntWhen").value="";
+  });
+
+  // reminders (while app open)
+  function checkReminders(){
+    var now=new Date();
+    tasks.forEach(function(t){
+      if(!t.done && !t.notified && new Date(t.datetime)<=now){
+        t.notified=true; saveTasks();
+        var msg="Напоминание: "+t.title;
+        try{ if(window.Notification && Notification.permission==="granted"){ new Notification("NOVA 🗓",{body:t.title}); } }catch(e){}
+        sysmsg("🔔 "+msg,"ok"); speak(msg);
+      }
+    });
+  }
+  setInterval(checkReminders,15000);
+  if(window.Notification && Notification.permission==="default"){ try{Notification.requestPermission();}catch(e){} }
+
+  // ---------- model list ----------
+  function loadModels(){
+    var note=$("modelNote"); note.textContent="Загружаю список моделей…";
+    fetch("https://openrouter.ai/api/v1/models").then(function(r){return r.json();}).then(function(d){
+      models=(d&&d.data)?d.data:[];
+      models.sort(function(a,b){return (a.id||"").localeCompare(b.id||"");});
+      $("mCount").textContent="("+models.length+")";
+      note.textContent="Список загружен. Нажми, чтобы выбрать.";
+      renderModelItems("");
+    }).catch(function(){ note.textContent="Не удалось загрузить список. Можно вписать модель вручную в поиске."; });
+  }
+  function renderModelItems(q){
+    var box=$("modelItems"); box.innerHTML=""; q=(q||"").toLowerCase();
+    var list=models.filter(function(m){return !q || (m.id||"").toLowerCase().indexOf(q)>=0 || (m.name||"").toLowerCase().indexOf(q)>=0;}).slice(0,60);
+    if(!models.length && q){ // allow manual id
+      var man=document.createElement("div"); man.className="mitem"; man.innerHTML='<b>Использовать: '+q+'</b><small>вписать вручную</small>';
+      man.addEventListener("click",function(){selectModel(q,q);}); box.appendChild(man); return;
+    }
+    list.forEach(function(m){
+      var it=document.createElement("div"); it.className="mitem"+(m.id===S.model?" sel":"");
+      it.innerHTML='<b></b><small></small>'; it.querySelector("b").textContent=m.name||m.id; it.querySelector("small").textContent=m.id;
+      it.addEventListener("click",function(){selectModel(m.id,m.name||m.id);});
+      box.appendChild(it);
+    });
+    if(!list.length){var e=document.createElement("div"); e.className="mitem"; e.innerHTML='<small>Ничего не найдено</small>'; box.appendChild(e);}
+  }
+  function selectModel(id,name){ S.model=id; $("modelCurName").textContent=id; $("modelList").classList.remove("open"); renderModelItems($("modelSearch").value); }
+  $("modelCur").addEventListener("click",function(){ var l=$("modelList"); l.classList.toggle("open"); if(l.classList.contains("open")&&!models.length)loadModels(); });
+  $("modelSearch").addEventListener("input",function(){renderModelItems(this.value);});
+
+  // ---------- settings sheet ----------
+  function openSettings(){$("key").value=S.key; $("modelCurName").textContent=S.model; $("prompt").value=S.prompt; $("elKey").value=S.elKey; populateVoiceSelect(); populateElSelect(); $("ovSettings").classList.add("open"); if(!models.length)loadModels();}
+  function populateElSelect(){
+    var sel=$("elSel"); if(!sel)return; sel.innerHTML="";
+    function addOpt(id,label){var o=document.createElement("option"); o.value=id; o.textContent=label; if(id===S.elVoice)o.selected=true; sel.appendChild(o);}
+    addOpt("","— системный голос —");
+    BUILTIN_VOICES.forEach(function(v){addOpt(v.id,"★ "+v.name);});
+    elVoices.forEach(function(v){addOpt(v.voice_id, v.name+(v.labels&&v.labels.gender?" · "+v.labels.gender:""));});
+    if(S.elVoice && !elVoices.length && !BUILTIN_VOICES.some(function(v){return v.id===S.elVoice;})){addOpt(S.elVoice,S.elVoiceName||S.elVoice);}
+  }
+  function loadElVoices(){
+    var k=($("elKey").value||"").replace(/[^\x21-\x7E]/g,""); var btn=$("elLoad");
+    if(!k){btn.textContent="Сначала вставь ключ ElevenLabs"; return;}
+    btn.textContent="Загружаю…";
+    fetch("https://api.elevenlabs.io/v1/voices",{headers:{"xi-api-key":k}})
+    .then(function(r){ if(!r.ok) return r.text().then(function(x){throw new Error(r.status+"");}); return r.json(); })
+    .then(function(d){elVoices=(d&&d.voices)?d.voices:[]; populateElSelect(); btn.textContent=elVoices.length?("Загружено: "+elVoices.length+" голосов"):"Список пуст — бери голоса ★ ниже";})
+    .catch(function(e){elVoices=[]; populateElSelect(); btn.textContent=(e.message==="401"||e.message==="403")?"Ключ без прав на голоса — бери ★ ниже":"Ошибка — бери голоса ★ ниже";});
+  }
+  $("elLoad").addEventListener("click",loadElVoices);
+  $("elTest").addEventListener("click",function(){
+    var k=($("elKey").value||"").replace(/[^\x21-\x7E]/g,""), vid=$("elSel").value;
+    if(!k||!vid){sysmsg("Выбери голос ElevenLabs (и проверь ключ)","err"); return;}
+    fetch("https://api.elevenlabs.io/v1/text-to-speech/"+encodeURIComponent(vid),{method:"POST",headers:{"xi-api-key":k,"Content-Type":"application/json","Accept":"audio/mpeg"},body:JSON.stringify({text:"Привет, я НОВА. Так звучит мой голос.",model_id:"eleven_multilingual_v2"})})
+    .then(function(r){if(!r.ok)throw new Error(); return r.blob();}).then(function(b){var a=new Audio(URL.createObjectURL(b)); a.play();})
+    .catch(function(){sysmsg("Не получилось озвучить — проверь ключ или баланс ElevenLabs","err");});
+  });
+  $("voiceTest").addEventListener("click",function(){
+    var name=$("voiceSel").value, vs=allVoices(), v=null, i;
+    for(i=0;i<vs.length;i++){if(vs[i].name===name){v=vs[i];break;}}
+    try{speechSynthesis.cancel(); var u=new SpeechSynthesisUtterance("Привет, я НОВА. Так звучит мой голос."); u.lang=(v&&v.lang)||"ru-RU"; if(v)u.voice=v; speechSynthesis.speak(u);}catch(e){}
+  });
+  function closeSettings(){$("ovSettings").classList.remove("open");}
+  $("openSettings").addEventListener("click",openSettings);
+  $("cancelSettings").addEventListener("click",closeSettings);
+  $("ovSettings").addEventListener("click",function(e){if(e.target===this)closeSettings();});
+  $("saveSettings").addEventListener("click",function(){
+    S.key=$("key").value.replace(/[^\x21-\x7E]/g,""); S.prompt=$("prompt").value.trim()||DEFAULT_PROMPT;
+    S.voiceName=$("voiceSel").value;
+    S.elKey=$("elKey").value.replace(/[^\x21-\x7E]/g,""); S.elVoice=$("elSel").value;
+    var eo=$("elSel").options[$("elSel").selectedIndex]; S.elVoiceName=eo?eo.textContent:"";
+    save("nv_key",S.key); save("nv_model",S.model); save("nv_prompt",S.prompt); save("nv_voice",S.voiceName);
+    save("nv_elkey",S.elKey); save("nv_elvoice",S.elVoice); save("nv_elname",S.elVoiceName); pickVoice();
+    closeSettings(); sysmsg("Настройки сохранены ✓","ok");
+  });
+  $("clearChat").addEventListener("click",function(){history=[]; persistHist(); render(); closeSettings();});
+
+  // ---------- tasks sheet ----------
+  $("openTasks").addEventListener("click",function(){renderTasks(); $("ovTasks").classList.add("open");});
+  $("closeTasks").addEventListener("click",function(){$("ovTasks").classList.remove("open");});
+  $("ovTasks").addEventListener("click",function(e){if(e.target===this)this.classList.remove("open");});
+
+  render(); updateBadge(); renderTasks();
+})();
+</script>
+</body>
+</html>
